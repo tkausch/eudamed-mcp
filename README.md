@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="EUDAMED MCP — EUDAMED data for AI agents" width="800">
+</p>
+
 # eudamed-mcp
 
 A Model Context Protocol (MCP) server that exposes the [EUDAMED public API](https://github.com/tkausch/eudamed-public)
