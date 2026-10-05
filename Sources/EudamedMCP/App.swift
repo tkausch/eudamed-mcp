@@ -5,9 +5,15 @@ import MCP
 @main
 struct EudamedMCPApp {
     static func main() async throws {
-        // The stdio transport speaks JSON-RPC over stdout, so any logging must
-        // go to stderr to avoid corrupting the protocol stream.
-        LoggingSystem.bootstrap { label in StreamLogHandler.standardError(label: label) }
+        // `eudamed-mcp serve [--hostname H] [--port P]` runs the Streamable HTTP
+        // server; any other invocation speaks MCP over stdio.
+        let httpMode = CommandLine.arguments.dropFirst().first == "serve"
+
+        if !httpMode {
+            // The stdio transport speaks JSON-RPC over stdout, so any logging must
+            // go to stderr to avoid corrupting the protocol stream.
+            LoggingSystem.bootstrap { label in StreamLogHandler.standardError(label: label) }
+        }
 
         let tools: EudamedTools
         do {
@@ -17,6 +23,17 @@ struct EudamedMCPApp {
             exit(1)
         }
 
+        if httpMode {
+            try await HTTPServer.run(tools: tools)
+        } else {
+            let server = await makeServer(tools: tools)
+            try await server.start(transport: StdioTransport())
+            await server.waitUntilCompleted()
+        }
+    }
+
+    /// Creates an MCP server with the EUDAMED tools registered.
+    static func makeServer(tools: EudamedTools) async -> Server {
         let server = Server(
             name: "eudamed-mcp",
             version: "0.1.0",
@@ -36,8 +53,6 @@ struct EudamedMCPApp {
             await tools.call(params)
         }
 
-        let transport = StdioTransport()
-        try await server.start(transport: transport)
-        await server.waitUntilCompleted()
+        return server
     }
 }

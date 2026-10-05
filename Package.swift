@@ -13,8 +13,9 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/tkausch/eudamed-public", from: "1.0.19"),
+        .package(url: "https://github.com/tkausch/eudamed-public", from: "1.0.20"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.12.1"),
+        .package(url: "https://github.com/vapor/vapor", from: "4.115.0"),
     ],
     targets: [
         .executableTarget(
@@ -22,6 +23,7 @@ let package = Package(
             dependencies: [
                 .product(name: "EudamedClient", package: "eudamed-public"),
                 .product(name: "MCP", package: "swift-sdk"),
+                .product(name: "Vapor", package: "vapor"),
             ]
         ),
         .testTarget(
