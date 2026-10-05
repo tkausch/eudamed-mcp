@@ -13,6 +13,15 @@ It wraps [`eudamed-public`](https://github.com/tkausch/eudamed-public)'s
 `EudamedClient` library, which already handles pagination, retries, and
 resolving numeric ids to human-readable reference labels.
 
+## Hosted instance
+
+A deployment runs on Railway at **https://accurate-illumination-production-75fe.up.railway.app**:
+
+- MCP endpoint: `https://accurate-illumination-production-75fe.up.railway.app/mcp`
+- Health check: `https://accurate-illumination-production-75fe.up.railway.app/health`
+
+See [Configure in an MCP client](#remote-http) to connect to it.
+
 ## Tools
 
 | Tool | Description |
@@ -121,17 +130,17 @@ or your hosting platform.
 
 ### Container
 
-The image is defined in `Containerfile`. With [Apple container](https://github.com/apple/container):
+The image is defined in `Dockerfile`. With [Apple container](https://github.com/apple/container):
 
 ```sh
 container build -t eudamed-mcp .
 container run -d --name eudamed-mcp -p 8080:8080 -e EUDAMED_MCP_TOKEN=change-me eudamed-mcp
 ```
 
-With Docker, pass the file explicitly:
+With Docker:
 
 ```sh
-docker build -f Containerfile -t eudamed-mcp .
+docker build -t eudamed-mcp .
 docker run -d --name eudamed-mcp -p 8080:8080 -e EUDAMED_MCP_TOKEN=change-me eudamed-mcp
 ```
 
@@ -162,8 +171,53 @@ curl http://127.0.0.1:8080/health
 container image prune
 ```
 
-With Docker, the steps are the same: `docker build --pull -f Containerfile -t eudamed-mcp .`,
+With Docker, the steps are the same: `docker build --pull -t eudamed-mcp .`,
 then `docker stop`, `docker rm`, `docker run` as above, and `docker image prune`.
+
+### Railway
+
+[Railway](https://railway.com) builds the `Dockerfile` and serves the app over
+HTTPS. It sets `PORT` automatically; the image already binds `0.0.0.0`.
+Install the [Railway CLI](https://docs.railway.com/guides/cli) first, e.g.
+`brew install railway`.
+
+```sh
+# 1. Log in and link this directory to your Railway project and service.
+#    (Create the project in the dashboard first, or run `railway init`.)
+railway login
+railway link
+
+# 2. Set the access token. Use a long random value and keep it secret.
+railway variables --set "EUDAMED_MCP_TOKEN=$(openssl rand -hex 32)"
+
+# 3. Upload this directory, build the Dockerfile and deploy.
+#    Files in .gitignore (such as .build/) are not uploaded.
+railway up
+
+# 4. Create a public https://<name>.up.railway.app domain
+#    (the hosted instance is https://accurate-illumination-production-75fe.up.railway.app).
+railway domain
+```
+
+Optionally restrict the accepted `Host` header to that domain:
+
+```sh
+railway variables --set "EUDAMED_MCP_ALLOWED_HOSTS=accurate-illumination-production-75fe.up.railway.app"
+```
+
+Check the deployment:
+
+```sh
+curl https://accurate-illumination-production-75fe.up.railway.app/health   # → ok
+railway logs
+```
+
+In the service settings, set the health check path to `/health` so Railway
+only switches traffic to a new deployment once it responds.
+
+To update, run `railway up` again from the latest code. Railway builds a new
+image and replaces the running deployment. Show the token again with
+`railway variables` when you configure an MCP client.
 
 ## Configure in an MCP client
 
@@ -172,11 +226,12 @@ then `docker stop`, `docker rm`, `docker run` as above, and `docker image prune`
 Claude Code:
 
 ```sh
-claude mcp add --transport http eudamed https://your-host/mcp \
+claude mcp add --transport http eudamed https://accurate-illumination-production-75fe.up.railway.app/mcp \
   --header "Authorization: Bearer change-me"
 ```
 
-On claude.ai, add it as a custom connector with the same URL.
+On claude.ai, add it as a custom connector with the same URL. For your own
+deployment, replace the host with yours.
 
 ### Local (stdio)
 
