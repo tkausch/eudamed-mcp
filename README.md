@@ -251,7 +251,7 @@ scripts/gcp/deploy.sh
 
 `deploy.sh` mounts the token as `EUDAMED_MCP_TOKEN` from Secret Manager, allows
 unauthenticated invocation (access is protected by the bearer token), scales
-from 0 to 3 instances. `EUDAMED_MCP_ALLOWED_HOSTS` is left unset, so both Cloud Run
+from 0 to 1 instance (cost cap, 512 Mi, 1 vCPU, 60 s request timeout). `EUDAMED_MCP_ALLOWED_HOSTS` is left unset, so both Cloud Run
 hostnames of the service work.
 
 Show the token again and check the deployment:

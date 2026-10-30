@@ -26,7 +26,7 @@ gcloud run deploy "$SERVICE" \
   --allow-unauthenticated \
   --port 8080 \
   --cpu 1 --memory 512Mi \
-  --min-instances 0 --max-instances 3 \
+  --min-instances 0 --max-instances 1 --timeout 60s \
   "${SECRET_FLAG[@]}"
 
 URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format 'value(status.url)')"
