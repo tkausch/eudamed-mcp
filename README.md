@@ -137,6 +137,16 @@ container build -t eudamed-mcp .
 container run -d --name eudamed-mcp -p 8080:8080 -e EUDAMED_MCP_TOKEN=change-me eudamed-mcp
 ```
 
+With the helper script (builds the image and starts the container on
+`127.0.0.1:8080`):
+
+```sh
+scripts/local-container.sh                 # build + run
+EUDAMED_MCP_TOKEN=change-me scripts/local-container.sh run   # restart with a token
+scripts/local-container.sh logs            # follow logs
+scripts/local-container.sh stop            # stop and remove the container
+```
+
 With Docker:
 
 ```sh
@@ -218,6 +228,45 @@ only switches traffic to a new deployment once it responds.
 To update, run `railway up` again from the latest code. Railway builds a new
 image and replaces the running deployment. Show the token again with
 `railway variables` when you configure an MCP client.
+
+### Google Cloud Run
+
+The scripts in `scripts/gcp/` build the `Dockerfile` with Cloud Build, store the
+image in Artifact Registry and deploy it to Cloud Run. They need the
+[gcloud CLI](https://cloud.google.com/sdk/docs/install), a logged-in account
+(`gcloud auth login`) and a project with billing enabled. Project, region and
+service name are set in `scripts/gcp/config.sh` (defaults: `eudamed-mcp-513210`,
+`europe-west6`, `eudamed-mcp`) and can be overridden with environment variables.
+
+```sh
+# 1. One-time setup: enable APIs, create the Artifact Registry repository,
+#    generate the bearer token in Secret Manager and grant IAM roles.
+#    The token is printed once.
+scripts/gcp/setup.sh
+
+# 2. Build with Cloud Build and deploy (takes about 6 minutes).
+#    Prints the MCP endpoint and health check URL.
+scripts/gcp/deploy.sh
+```
+
+`deploy.sh` mounts the token as `EUDAMED_MCP_TOKEN` from Secret Manager, allows
+unauthenticated invocation (access is protected by the bearer token), scales
+from 0 to 3 instances. `EUDAMED_MCP_ALLOWED_HOSTS` is left unset, so both Cloud Run
+hostnames of the service work.
+
+Show the token again and check the deployment:
+
+```sh
+gcloud secrets versions access latest --secret eudamed-mcp-token
+curl <service-url>/health   # → ok
+```
+
+To deploy an open endpoint without a bearer token (anyone with the URL can call
+it), run `scripts/gcp/deploy.sh --no-token`. Run it without the flag to require
+the token again.
+
+To update, run `scripts/gcp/deploy.sh` again; every run builds a new image tagged
+with the current git commit and creates a new revision.
 
 ## Configure in an MCP client
 
